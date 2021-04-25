@@ -26,4 +26,8 @@ impl MusicClient {
         self.conn.load(name, ..)?;
         Ok(self.conn.play()?)
     }
+
+    pub fn playlists(&mut self) -> Result<Vec<mpd::Playlist>, mpd::error::Error> {
+        self.conn.playlists()
+    }
 }
