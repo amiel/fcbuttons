@@ -90,6 +90,10 @@ impl ModeTrait for MusicMode {
     fn right_blue_botton(&mut self) -> anyhow::Result<()> {
         self.client.next()
     }
+
+    fn left_blue_button(&mut self) -> anyhow::Result<()> {
+        self.client.prev()
+    }
 }
 
 fn main() -> anyhow::Result<()> {
