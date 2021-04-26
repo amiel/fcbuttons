@@ -16,6 +16,10 @@ impl MusicClient {
         Ok(self.conn.stop()?)
     }
 
+    pub fn next(&mut self) -> anyhow::Result<()> {
+        Ok(self.conn.next()?)
+    }
+
     pub fn status(&mut self) -> Result<mpd::Status, mpd::error::Error> {
         self.conn.status()
     }

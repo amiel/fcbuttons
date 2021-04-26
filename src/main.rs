@@ -1,70 +1,126 @@
 mod buttons;
+mod easyopc;
+mod lightstrip;
 mod music;
 
-enum Mode {
-    Idle,
-    Playing,
-}
-
 struct CurrentStatus {
-    mode: Mode,
+    mode: Box<dyn ModeTrait>,
 }
 
 impl CurrentStatus {
-    fn set_mode(&mut self, mode: Mode) {
-        self.mode = mode;
+    fn set_mode(&mut self, mode: impl ModeTrait + 'static, led: u64) -> anyhow::Result<()> {
+        buttons::set_led(buttons::MODE_BUTTON_GREEN_LED, 0)?;
+        buttons::set_led(buttons::MODE_BUTTON_BLUE_LED, 0)?;
+        buttons::set_led(buttons::MODE_BUTTON_RED_LED, 0)?;
 
-        buttons::set_led(buttons::MODE_BUTTON_GREEN_LED, 0);
-        buttons::set_led(buttons::MODE_BUTTON_BLUE_LED, 0);
-        buttons::set_led(buttons::MODE_BUTTON_RED_LED, 0);
+        self.mode.teardown()?;
 
-        let led = match self.mode {
-            Mode::Idle => buttons::MODE_BUTTON_RED_LED,
-            Mode::Playing => buttons::MODE_BUTTON_BLUE_LED,
-        };
+        self.mode = Box::new(mode);
+        self.mode.setup()?;
 
-        buttons::set_led(led, 1);
+        buttons::set_led(led, 1)?;
+
+        Ok(())
+    }
+}
+
+trait ModeTrait {
+    fn setup(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn teardown(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    fn red_button(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn left_blue_button(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn right_blue_botton(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+    fn green_button(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
+struct IdleMode {}
+
+impl IdleMode {
+    fn create() -> anyhow::Result<IdleMode> {
+        Ok(IdleMode {})
+    }
+}
+
+impl ModeTrait for IdleMode {}
+
+struct MusicMode {
+    client: music::MusicClient,
+    playlists: Vec<String>,
+}
+
+impl MusicMode {
+    fn create() -> anyhow::Result<MusicMode> {
+        let mut client = music::new_client().expect("Error creating music client");
+
+        let playlists = client
+            .playlists()
+            .unwrap()
+            .iter()
+            .map(|playlist| playlist.name.clone())
+            .collect();
+        // else: error handling?
+
+        Ok(MusicMode { client, playlists })
+    }
+}
+
+impl ModeTrait for MusicMode {
+    fn setup(&mut self) -> anyhow::Result<()> {
+        self.client.play_playlist(self.playlists[0].clone())?;
+        Ok(())
+    }
+
+    fn teardown(&mut self) -> anyhow::Result<()> {
+        self.client.stop()
+    }
+
+    fn right_blue_botton(&mut self) -> anyhow::Result<()> {
+        self.client.next()
     }
 }
 
 fn main() -> anyhow::Result<()> {
-    let mut current = CurrentStatus { mode: Mode::Idle };
+    let mut current = CurrentStatus {
+        mode: Box::new(IdleMode {}),
+    };
 
     let (sender, receiver) = std::sync::mpsc::channel();
-    let mut music_client = music::new_client().expect("Error creating music client");
 
     let threads = buttons::setup(&sender)?;
-
-    if let Ok(playlists) = music_client.playlists() {
-        for playlist in playlists {
-            println!("Got {:?}", playlist.name);
-        }
-    }
 
     for event in receiver.iter() {
         println!("BUTTON: {}", event);
 
         match event {
-            buttons::MODE_BUTTON_BLUE => {
-                current.set_mode(Mode::Playing);
-                music_client.play_playlist("sticks".to_string())?
-            }
-
             buttons::MODE_BUTTON_GREEN => {
-                current.set_mode(Mode::Playing);
-
-                music_client.play_playlist("flute".to_string())?
+                current.set_mode(MusicMode::create()?, buttons::MODE_BUTTON_GREEN_LED)?
             }
-
             buttons::MODE_BUTTON_RED => {
-                current.set_mode(Mode::Idle);
-
-                music_client.stop()?;
+                current.set_mode(IdleMode::create()?, buttons::MODE_BUTTON_RED_LED)?
+            }
+            buttons::MODE_BUTTON_BLUE => {
+                current.set_mode(IdleMode::create()?, buttons::MODE_BUTTON_BLUE_LED)?
             }
 
-            _ => {
-                println!("Status: {:?}", music_client.status());
-            }
+            buttons::RED_BUTTON => current.mode.red_button()?,
+            buttons::RIGHT_BLUE_BUTTON => current.mode.right_blue_botton()?,
+            buttons::LEFT_BLUE_BUTTON => current.mode.left_blue_button()?,
+            buttons::GREEN_BUTTON => current.mode.green_button()?,
+
+            _ => {}
         }
     }
 

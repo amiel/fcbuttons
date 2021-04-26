@@ -10,6 +10,8 @@ edition = "2018"
 sysfs_gpio = "0.5"
 mpd = "0.0.12"
 anyhow = "1.0"
-# opc = "0.3"
+
+# For easyopc
+rgb = "0.8"
 
 
