@@ -1,7 +1,12 @@
 mod buttons;
 mod easyopc;
 mod lightstrip;
+mod modes;
 mod music;
+
+use modes::idle::IdleMode;
+use modes::music::MusicMode;
+use modes::ModeTrait;
 
 struct CurrentStatus {
     mode: Box<dyn ModeTrait>,
@@ -21,78 +26,6 @@ impl CurrentStatus {
         buttons::set_led(led, 1)?;
 
         Ok(())
-    }
-}
-
-trait ModeTrait {
-    fn setup(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn teardown(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    fn red_button(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn left_blue_button(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn right_blue_botton(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn green_button(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-}
-
-struct IdleMode {}
-
-impl IdleMode {
-    fn create() -> anyhow::Result<IdleMode> {
-        Ok(IdleMode {})
-    }
-}
-
-impl ModeTrait for IdleMode {}
-
-struct MusicMode {
-    client: music::MusicClient,
-    playlists: Vec<String>,
-}
-
-impl MusicMode {
-    fn create() -> anyhow::Result<MusicMode> {
-        let mut client = music::new_client().expect("Error creating music client");
-
-        let playlists = client
-            .playlists()
-            .unwrap()
-            .iter()
-            .map(|playlist| playlist.name.clone())
-            .collect();
-        // else: error handling?
-
-        Ok(MusicMode { client, playlists })
-    }
-}
-
-impl ModeTrait for MusicMode {
-    fn setup(&mut self) -> anyhow::Result<()> {
-        self.client.play_playlist(self.playlists[0].clone())?;
-        Ok(())
-    }
-
-    fn teardown(&mut self) -> anyhow::Result<()> {
-        self.client.stop()
-    }
-
-    fn right_blue_botton(&mut self) -> anyhow::Result<()> {
-        self.client.next()
-    }
-
-    fn left_blue_button(&mut self) -> anyhow::Result<()> {
-        self.client.prev()
     }
 }
 

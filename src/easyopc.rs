@@ -22,17 +22,6 @@ impl PixelControl {
     }
 }
 
-pub fn draw_with_interval_ms<F: FnMut()>(ms: u64, draw: F) {
-    draw_with_interval(Duration::from_millis(ms), draw)
-}
-
-pub fn draw_with_interval<F: FnMut()>(interval: Duration, mut draw: F) {
-    loop {
-        draw();
-        std::thread::sleep(interval);
-    }
-}
-
 impl Default for PixelControl {
     fn default() -> PixelControl {
         let endpoint = env::var("OPC_ENDPOINT").unwrap_or(String::from("127.0.0.1:7890"));
