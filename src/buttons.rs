@@ -86,7 +86,10 @@ fn interrupt(
                 let val = input.get_value()?;
                 if val != prev_val {
                     if val == 0 {
+                        // value is grounded when button is pushed
                         tx.send(pin).unwrap()
+                    } else {
+                        // value is positive when the button is at rest
                     }
                     prev_val = val;
                 }

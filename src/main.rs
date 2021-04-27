@@ -1,8 +1,10 @@
 mod buttons;
-mod easyopc;
 mod lightstrip;
 mod modes;
 mod music;
+
+#[macro_use]
+extern crate lazy_static;
 
 use modes::idle::IdleMode;
 use modes::music::MusicMode;
@@ -30,6 +32,8 @@ impl CurrentStatus {
 }
 
 fn main() -> anyhow::Result<()> {
+    println!("STARTUP");
+
     let mut current = CurrentStatus {
         mode: Box::new(IdleMode {}),
     };
@@ -38,6 +42,13 @@ fn main() -> anyhow::Result<()> {
 
     let threads = buttons::setup(&sender)?;
 
+    lightstrip::full_flash_colors(vec![lightstrip::Pixel {
+        r: 164,
+        g: 113,
+        b: 228,
+    }]);
+
+    println!("Starting event loop");
     for event in receiver.iter() {
         println!("BUTTON: {}", event);
 

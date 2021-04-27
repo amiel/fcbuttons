@@ -24,11 +24,11 @@ impl MusicClient {
         Ok(self.conn.prev()?)
     }
 
-    pub fn status(&mut self) -> Result<mpd::Status, mpd::error::Error> {
-        self.conn.status()
-    }
+    // pub fn status(&mut self) -> Result<mpd::Status, mpd::error::Error> {
+    //     self.conn.status()
+    // }
 
-    pub fn play_playlist(&mut self, name: String) -> anyhow::Result<()> {
+    pub fn play_playlist(&mut self, name: &String) -> anyhow::Result<()> {
         self.conn.pause(true)?;
         self.conn.clear()?;
         self.conn.load(name, ..)?;
