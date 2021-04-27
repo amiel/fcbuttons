@@ -23,15 +23,19 @@ impl MusicMode {
             .collect();
         // else: error handling?
 
+        let current_playlist = 0;
+
         Ok(MusicMode {
             client,
             playlists,
-            current_playlist: 0,
+            current_playlist,
         })
     }
 
     fn start_current_playlist(&mut self) -> anyhow::Result<()> {
+        println!("playlist {}", self.current_playlist);
         let name = self.playlists[self.current_playlist].clone();
+        println!("playlist {}", name);
         self.start_playlist(&name)?;
         Ok(())
     }
@@ -78,7 +82,10 @@ impl ModeTrait for MusicMode {
     }
 
     fn green_button(&mut self) -> anyhow::Result<()> {
-        self.current_playlist = (self.current_playlist - 1) % self.playlists.len();
+        self.current_playlist = self
+            .current_playlist
+            .checked_sub(1)
+            .unwrap_or(self.playlists.len() - 1);
         self.start_current_playlist()
     }
 }
