@@ -5,6 +5,8 @@ use std::env;
 use std::io::Write;
 use std::net::{Shutdown, TcpStream};
 use std::str::FromStr;
+use std::sync::mpsc;
+use std::thread;
 use tokio_io::codec::Encoder;
 
 pub struct PixelControl {
@@ -12,34 +14,66 @@ pub struct PixelControl {
     codec: OpcCodec,
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub struct Pixel {
     pub r: u8,
     pub g: u8,
     pub b: u8,
 }
 
-// TODO: thread!
-pub fn full_flash_colors(colors: Vec<Pixel>) {
-    let mut opc = PixelControl::default();
-    let mut pixels = vec![Pixel { r: 0, g: 0, b: 0 }; 64];
+pub struct Message {
+    pub color: Pixel,
+    pub fade: std::time::Duration,
+    pub delay: std::time::Duration,
+}
 
-    opc.emit(&pixels).unwrap();
-    opc.emit(&pixels).unwrap();
-    std::thread::sleep(std::time::Duration::from_secs(1));
+pub type Sender = mpsc::Sender<Message>;
+pub type Receiver = mpsc::Receiver<Message>;
 
-    for color in colors {
-        for i in 0..64 {
-            pixels[i] = color;
+pub fn setup() -> anyhow::Result<(Sender, thread::JoinHandle<anyhow::Result<()>>)> {
+    let mut opc = init()?;
+
+    let (sender, receiver): (Sender, Receiver) = mpsc::channel();
+    let clear_pixels = vec![Pixel::default(); 64];
+
+    let join_handle = thread::spawn(move || {
+        for message in receiver.iter() {
+            opc.emit(&clear_pixels).unwrap();
+            opc.emit(&clear_pixels).unwrap();
+
+            let pixels = vec![message.color.clone(); 64];
+            opc.emit(&pixels).unwrap();
+
+            thread::sleep(message.delay);
+
+            opc.emit(&clear_pixels).unwrap();
+
+            thread::sleep(message.fade);
         }
 
-        opc.emit(&pixels).unwrap();
+        Ok(())
+    });
 
-        std::thread::sleep(std::time::Duration::from_secs(2));
-    }
+    Ok((sender, join_handle))
+}
 
-    let pixels = vec![Pixel { r: 0, g: 0, b: 0 }; 64];
-    opc.emit(&pixels).unwrap();
+pub fn flash(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Message>> {
+    sender.send(Message {
+        delay: std::time::Duration::from_secs(1),
+        fade: std::time::Duration::from_secs(1),
+        color: color,
+    })
+}
+
+fn init() -> anyhow::Result<PixelControl> {
+    let endpoint = env::var("OPC_ENDPOINT").unwrap_or(String::from("127.0.0.1:7890"));
+    let stream = TcpStream::connect(endpoint)?;
+    stream.shutdown(Shutdown::Read)?; // Not a great listener...
+    stream.set_nodelay(true)?;
+    let codec = OpcCodec {};
+    let opc = PixelControl { stream, codec };
+
+    Ok(opc)
 }
 
 impl FromStr for Pixel {
@@ -68,21 +102,10 @@ impl PixelControl {
             .collect();
         let message = opc::Message::from_pixels(0, &pixels);
 
-        self.codec.encode(message, &mut buffer);
+        self.codec.encode(message, &mut buffer)?;
 
-        self.stream.write_all(&buffer);
+        self.stream.write_all(&buffer)?;
 
         Ok(())
-    }
-}
-
-impl Default for PixelControl {
-    fn default() -> PixelControl {
-        let endpoint = env::var("OPC_ENDPOINT").unwrap_or(String::from("127.0.0.1:7890"));
-        let stream = TcpStream::connect(endpoint).unwrap();
-        stream.shutdown(Shutdown::Read).unwrap(); // Not a great listener...
-        stream.set_nodelay(true).unwrap();
-        let codec = OpcCodec {};
-        PixelControl { stream, codec }
     }
 }

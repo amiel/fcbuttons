@@ -8,11 +8,12 @@ use crate::music;
 pub struct MusicMode {
     client: music::MusicClient,
     playlists: Vec<String>,
+    lightstrip: lightstrip::Sender,
     current_playlist: usize,
 }
 
 impl MusicMode {
-    pub fn create() -> anyhow::Result<MusicMode> {
+    pub fn create(lightstrip: &lightstrip::Sender) -> anyhow::Result<MusicMode> {
         let mut client = music::new_client().expect("Error creating music client");
 
         let playlists = client
@@ -28,6 +29,7 @@ impl MusicMode {
         Ok(MusicMode {
             client,
             playlists,
+            lightstrip: lightstrip.clone(),
             current_playlist,
         })
     }
@@ -44,7 +46,11 @@ impl MusicMode {
         self.client.play_playlist(name)?;
         let colors = self.colors_for_playlist(name);
         println!("Loaded colors for playlist: {:?}", colors);
-        lightstrip::full_flash_colors(colors);
+
+        for color in colors {
+            lightstrip::flash(&self.lightstrip, color)?;
+        }
+
         Ok(())
     }
 

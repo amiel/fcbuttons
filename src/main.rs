@@ -32,30 +32,34 @@ impl CurrentStatus {
 }
 
 fn main() -> anyhow::Result<()> {
-    println!("STARTUP");
-
     let mut current = CurrentStatus {
         mode: Box::new(IdleMode {}),
     };
 
     let (sender, receiver) = std::sync::mpsc::channel();
 
-    let threads = buttons::setup(&sender)?;
+    let mut threads = buttons::setup(&sender)?;
+    let (lightstrip_sender, thread) = lightstrip::setup()?;
+    threads.push(thread);
 
-    lightstrip::full_flash_colors(vec![lightstrip::Pixel {
-        r: 164,
-        g: 113,
-        b: 228,
-    }]);
+    lightstrip::flash(
+        &lightstrip_sender,
+        lightstrip::Pixel {
+            r: 255,
+            g: 255,
+            b: 255,
+        },
+    )?;
 
     println!("Starting event loop");
     for event in receiver.iter() {
         println!("BUTTON: {}", event);
 
         match event {
-            buttons::MODE_BUTTON_GREEN => {
-                current.set_mode(MusicMode::create()?, buttons::MODE_BUTTON_GREEN_LED)?
-            }
+            buttons::MODE_BUTTON_GREEN => current.set_mode(
+                MusicMode::create(&lightstrip_sender)?,
+                buttons::MODE_BUTTON_GREEN_LED,
+            )?,
             buttons::MODE_BUTTON_RED => {
                 current.set_mode(IdleMode::create()?, buttons::MODE_BUTTON_RED_LED)?
             }
