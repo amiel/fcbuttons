@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use sysfs_gpio::{Direction, Pin};
 
 const LCDD4: u64 = 100;
@@ -70,6 +71,25 @@ pub fn setup(
     Ok(threads)
 }
 
+fn led_for_button(pin: u64) -> Option<u64> {
+    lazy_static! {
+        static ref BUTTON_MAP: HashMap<u64, u64> = [
+            (MODE_BUTTON_GREEN, MODE_BUTTON_GREEN_LED),
+            (MODE_BUTTON_RED, MODE_BUTTON_RED_LED),
+            (MODE_BUTTON_BLUE, MODE_BUTTON_BLUE_LED),
+            (RED_BUTTON, RED_BUTTON_LED),
+            (RIGHT_BLUE_BUTTON, RIGHT_BLUE_BUTTON_LED),
+            (LEFT_BLUE_BUTTON, LEFT_BLUE_BUTTON_LED),
+            (GREEN_BUTTON, GREEN_BUTTON_LED),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+    }
+
+    BUTTON_MAP.get(&pin).map(|v| *v)
+}
+
 fn interrupt(
     pin: u64,
     channel: &std::sync::mpsc::Sender<u64>,
@@ -81,15 +101,20 @@ fn interrupt(
         let result = input.with_exported(|| {
             input.set_direction(Direction::In).unwrap();
 
-            let mut prev_val: u8 = 255;
+            let mut prev_val: u8 = 0;
             loop {
                 let val = input.get_value()?;
                 if val != prev_val {
+                    let led = led_for_button(pin).expect("Could not find led for pin");
+
                     if val == 0 {
                         // value is grounded when button is pushed
-                        tx.send(pin).unwrap()
+                        set_led(led, 1).expect("Could not set led");
                     } else {
                         // value is positive when the button is at rest
+                        set_led(led, 0).expect("Could not set led");
+
+                        tx.send(pin).unwrap()
                     }
                     prev_val = val;
                 }

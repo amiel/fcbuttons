@@ -35,9 +35,8 @@ impl MusicMode {
     }
 
     fn start_current_playlist(&mut self) -> anyhow::Result<()> {
-        println!("playlist {}", self.current_playlist);
         let name = self.playlists[self.current_playlist].clone();
-        println!("playlist {}", name);
+        println!("starting playlist {}", name);
         self.start_playlist(&name)?;
         Ok(())
     }

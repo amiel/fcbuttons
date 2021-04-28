@@ -12,20 +12,29 @@ use modes::ModeTrait;
 
 struct CurrentStatus {
     mode: Box<dyn ModeTrait>,
+    current_led: Option<u64>,
 }
 
 impl CurrentStatus {
-    fn set_mode(&mut self, mode: impl ModeTrait + 'static, led: u64) -> anyhow::Result<()> {
+    fn set_mode(&mut self, mode: impl ModeTrait + 'static, led: Option<u64>) -> anyhow::Result<()> {
         buttons::set_led(buttons::MODE_BUTTON_GREEN_LED, 0)?;
         buttons::set_led(buttons::MODE_BUTTON_BLUE_LED, 0)?;
         buttons::set_led(buttons::MODE_BUTTON_RED_LED, 0)?;
 
         self.mode.teardown()?;
 
-        self.mode = Box::new(mode);
-        self.mode.setup()?;
+        if self.current_led != led {
+            self.current_led = led;
 
-        buttons::set_led(led, 1)?;
+            if let Some(led) = led {
+                buttons::set_led(led, 1)?;
+
+                self.mode = Box::new(mode);
+                self.mode.setup()?;
+            }
+        } else {
+            self.current_led = None;
+        }
 
         Ok(())
     }
@@ -34,7 +43,10 @@ impl CurrentStatus {
 fn main() -> anyhow::Result<()> {
     let mut current = CurrentStatus {
         mode: Box::new(IdleMode {}),
+        current_led: None,
     };
+
+    current.set_mode(IdleMode::create()?, None)?;
 
     let (sender, receiver) = std::sync::mpsc::channel();
 
@@ -58,13 +70,13 @@ fn main() -> anyhow::Result<()> {
         match event {
             buttons::MODE_BUTTON_GREEN => current.set_mode(
                 MusicMode::create(&lightstrip_sender)?,
-                buttons::MODE_BUTTON_GREEN_LED,
+                Some(buttons::MODE_BUTTON_GREEN_LED),
             )?,
             buttons::MODE_BUTTON_RED => {
-                current.set_mode(IdleMode::create()?, buttons::MODE_BUTTON_RED_LED)?
+                current.set_mode(IdleMode::create()?, Some(buttons::MODE_BUTTON_RED_LED))?
             }
             buttons::MODE_BUTTON_BLUE => {
-                current.set_mode(IdleMode::create()?, buttons::MODE_BUTTON_BLUE_LED)?
+                current.set_mode(IdleMode::create()?, Some(buttons::MODE_BUTTON_BLUE_LED))?
             }
 
             buttons::RED_BUTTON => current.mode.red_button()?,
