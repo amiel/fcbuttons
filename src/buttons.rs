@@ -101,7 +101,7 @@ fn interrupt(
         let result = input.with_exported(|| {
             input.set_direction(Direction::In).unwrap();
 
-            let mut prev_val: u8 = 0;
+            let mut prev_val: u8 = 1;
             loop {
                 let val = input.get_value()?;
                 if val != prev_val {
