@@ -18,18 +18,19 @@ impl MusicMode {
 
         let playlists = client
             .playlists()
-            .unwrap()
+            .expect("Error loading playlists")
             .iter()
             .map(|playlist| playlist.name.clone())
             .collect();
         // else: error handling?
 
         let current_playlist = 0;
+        let lightstrip = lightstrip.clone();
 
         Ok(MusicMode {
             client,
             playlists,
-            lightstrip: lightstrip.clone(),
+            lightstrip,
             current_playlist,
         })
     }

@@ -14,17 +14,25 @@ pub struct PixelControl {
     codec: OpcCodec,
 }
 
+lazy_static! {
+    static ref OFF_PIXELS: Vec<Pixel> = vec![Pixel::default(); 64];
+}
+
 #[derive(Clone, Debug, Copy, Default)]
 pub struct Pixel {
     pub r: u8,
     pub g: u8,
     pub b: u8,
 }
+pub enum Message {
+    Flash(ColorTime),
+    Chase(Pixel),
+}
 
-pub struct Message {
-    pub color: Pixel,
-    pub fade: std::time::Duration,
-    pub delay: std::time::Duration,
+pub struct ColorTime {
+    color: Pixel,
+    fade: std::time::Duration,
+    delay: std::time::Duration,
 }
 
 pub type Sender = mpsc::Sender<Message>;
@@ -34,21 +42,13 @@ pub fn setup() -> anyhow::Result<(Sender, thread::JoinHandle<anyhow::Result<()>>
     let mut opc = init()?;
 
     let (sender, receiver): (Sender, Receiver) = mpsc::channel();
-    let clear_pixels = vec![Pixel::default(); 64];
 
     let join_handle = thread::spawn(move || {
         for message in receiver.iter() {
-            opc.emit(&clear_pixels).unwrap();
-            opc.emit(&clear_pixels).unwrap();
-
-            let pixels = vec![message.color.clone(); 64];
-            opc.emit(&pixels).unwrap();
-
-            thread::sleep(message.delay);
-
-            opc.emit(&clear_pixels).unwrap();
-
-            thread::sleep(message.fade);
+            match message {
+                Message::Flash(one_color_flash) => do_one_color_flash(&mut opc, one_color_flash),
+                Message::Chase(color) => do_chase(&mut opc, color),
+            }
         }
 
         Ok(())
@@ -58,11 +58,48 @@ pub fn setup() -> anyhow::Result<(Sender, thread::JoinHandle<anyhow::Result<()>>
 }
 
 pub fn flash(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Message>> {
-    sender.send(Message {
+    sender.send(Message::Flash(ColorTime {
         delay: std::time::Duration::from_secs(1),
         fade: std::time::Duration::from_secs(1),
         color: color,
-    })
+    }))
+}
+
+pub fn chase(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Message>> {
+    sender.send(Message::Chase(color))
+}
+
+fn do_clear(opc: &mut PixelControl) {
+    let off_pixels = &OFF_PIXELS;
+    opc.emit(off_pixels).unwrap();
+}
+
+fn do_chase(opc: &mut PixelControl, color: Pixel) {
+    do_clear(opc);
+    let mut pixels = vec![color.clone(); 64];
+    let frame_rate = std::time::Duration::from_millis(10);
+
+    for i in 0..64 {
+        thread::sleep(frame_rate);
+        pixels[i] = Pixel::default();
+        opc.emit(&pixels).unwrap();
+    }
+
+    do_clear(opc);
+}
+
+fn do_one_color_flash(opc: &mut PixelControl, message: ColorTime) {
+    do_clear(opc);
+    do_clear(opc);
+
+    let pixels = vec![message.color.clone(); 64];
+    opc.emit(&pixels).unwrap();
+
+    thread::sleep(message.delay);
+
+    do_clear(opc);
+
+    thread::sleep(message.fade);
 }
 
 fn init() -> anyhow::Result<PixelControl> {

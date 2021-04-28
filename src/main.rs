@@ -6,6 +6,7 @@ mod music;
 #[macro_use]
 extern crate lazy_static;
 
+use modes::color_chase::ColorChaseMode;
 use modes::idle::IdleMode;
 use modes::music::MusicMode;
 use modes::ModeTrait;
@@ -54,7 +55,7 @@ fn main() -> anyhow::Result<()> {
     let (lightstrip_sender, thread) = lightstrip::setup()?;
     threads.push(thread);
 
-    lightstrip::flash(
+    lightstrip::chase(
         &lightstrip_sender,
         lightstrip::Pixel {
             r: 255,
@@ -75,9 +76,10 @@ fn main() -> anyhow::Result<()> {
             buttons::MODE_BUTTON_RED => {
                 current.set_mode(IdleMode::create()?, Some(buttons::MODE_BUTTON_RED_LED))?
             }
-            buttons::MODE_BUTTON_BLUE => {
-                current.set_mode(IdleMode::create()?, Some(buttons::MODE_BUTTON_BLUE_LED))?
-            }
+            buttons::MODE_BUTTON_BLUE => current.set_mode(
+                ColorChaseMode::create(&lightstrip_sender)?,
+                Some(buttons::MODE_BUTTON_BLUE_LED),
+            )?,
 
             buttons::RED_BUTTON => current.mode.red_button()?,
             buttons::RIGHT_BLUE_BUTTON => current.mode.right_blue_botton()?,
