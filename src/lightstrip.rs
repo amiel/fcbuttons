@@ -9,13 +9,16 @@ use std::sync::mpsc;
 use std::thread;
 use tokio_io::codec::Encoder;
 
+const N_LIGHTS: usize = 64;
+
 pub struct PixelControl {
-    pub stream: TcpStream,
+    stream: TcpStream,
     codec: OpcCodec,
+    buffer: [Pixel; N_LIGHTS],
 }
 
 lazy_static! {
-    static ref OFF_PIXELS: Vec<Pixel> = vec![Pixel::default(); 64];
+    static ref OFF_PIXELS: Vec<Pixel> = vec![Pixel::default(); N_LIGHTS];
 }
 
 #[derive(Clone, Debug, Copy, Default)]
@@ -24,9 +27,11 @@ pub struct Pixel {
     pub g: u8,
     pub b: u8,
 }
+
 pub enum Message {
     Flash(ColorTime),
     Chase(Pixel),
+    Unchase(Pixel),
 }
 
 pub struct ColorTime {
@@ -48,6 +53,7 @@ pub fn setup() -> anyhow::Result<(Sender, thread::JoinHandle<anyhow::Result<()>>
             match message {
                 Message::Flash(one_color_flash) => do_one_color_flash(&mut opc, one_color_flash),
                 Message::Chase(color) => do_chase(&mut opc, color),
+                Message::Unchase(color) => do_unchase(&mut opc, color),
             }
         }
 
@@ -69,30 +75,45 @@ pub fn chase(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Messag
     sender.send(Message::Chase(color))
 }
 
+pub fn unchase(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Message>> {
+    sender.send(Message::Unchase(color))
+}
+
 fn do_clear(opc: &mut PixelControl) {
     let off_pixels = &OFF_PIXELS;
     opc.emit(off_pixels).unwrap();
 }
 
 fn do_chase(opc: &mut PixelControl, color: Pixel) {
-    do_clear(opc);
-    let mut pixels = vec![color.clone(); 64];
     let frame_rate = std::time::Duration::from_millis(10);
 
-    for i in 0..64 {
-        thread::sleep(frame_rate);
-        pixels[i] = Pixel::default();
-        opc.emit(&pixels).unwrap();
-    }
+    // let join_handle = thread::spawn(|| {
+    opc.buffer = [color; N_LIGHTS];
+    opc.emit_buffer().unwrap();
 
-    do_clear(opc);
+    for i in 0..N_LIGHTS {
+        thread::sleep(frame_rate);
+        opc.buffer[i] = Pixel::default();
+        opc.emit_buffer().unwrap();
+    }
+    // });
+}
+
+fn do_unchase(opc: &mut PixelControl, color: Pixel) {
+    let frame_rate = std::time::Duration::from_millis(16);
+
+    for i in 0..N_LIGHTS {
+        thread::sleep(frame_rate);
+        opc.buffer[i] = color;
+        opc.emit_buffer().unwrap();
+    }
 }
 
 fn do_one_color_flash(opc: &mut PixelControl, message: ColorTime) {
     do_clear(opc);
     do_clear(opc);
 
-    let pixels = vec![message.color.clone(); 64];
+    let pixels = vec![message.color.clone(); N_LIGHTS];
     opc.emit(&pixels).unwrap();
 
     thread::sleep(message.delay);
@@ -108,7 +129,12 @@ fn init() -> anyhow::Result<PixelControl> {
     stream.shutdown(Shutdown::Read)?; // Not a great listener...
     stream.set_nodelay(true)?;
     let codec = OpcCodec {};
-    let opc = PixelControl { stream, codec };
+    let buffer = [Pixel::default(); N_LIGHTS];
+    let opc = PixelControl {
+        stream,
+        codec,
+        buffer,
+    };
 
     Ok(opc)
 }
@@ -129,10 +155,9 @@ impl FromStr for Pixel {
 }
 
 impl PixelControl {
-    pub fn emit(&mut self, pixels: &[Pixel]) -> std::io::Result<()> {
+    fn emit(&mut self, pixels: &[Pixel]) -> std::io::Result<()> {
         let mut buffer = BytesMut::new();
 
-        // : [[u8; 3]; 512]
         let pixels: Vec<[u8; 3]> = pixels
             .iter()
             .map(|pixel| [pixel.r, pixel.g, pixel.b])
@@ -144,5 +169,11 @@ impl PixelControl {
         self.stream.write_all(&buffer)?;
 
         Ok(())
+    }
+
+    fn emit_buffer(&mut self) -> std::io::Result<()> {
+        let buffer = self.buffer;
+
+        self.emit(&buffer)
     }
 }

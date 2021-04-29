@@ -6,7 +6,7 @@ mod music;
 #[macro_use]
 extern crate lazy_static;
 
-use modes::color_chase::ColorChaseMode;
+use modes::color::ColorMode;
 use modes::idle::IdleMode;
 use modes::music::MusicMode;
 use modes::ModeTrait;
@@ -67,32 +67,43 @@ fn main() -> anyhow::Result<()> {
     println!("Starting event loop");
     for event in receiver.iter() {
         println!("BUTTON: {}", event);
-
-        match event {
-            buttons::MODE_BUTTON_GREEN => current.set_mode(
-                MusicMode::create(&lightstrip_sender)?,
-                Some(buttons::MODE_BUTTON_GREEN_LED),
-            )?,
-            buttons::MODE_BUTTON_RED => {
-                current.set_mode(IdleMode::create()?, Some(buttons::MODE_BUTTON_RED_LED))?
-            }
-            buttons::MODE_BUTTON_BLUE => current.set_mode(
-                ColorChaseMode::create(&lightstrip_sender)?,
-                Some(buttons::MODE_BUTTON_BLUE_LED),
-            )?,
-
-            buttons::RED_BUTTON => current.mode.red_button()?,
-            buttons::RIGHT_BLUE_BUTTON => current.mode.right_blue_botton()?,
-            buttons::LEFT_BLUE_BUTTON => current.mode.left_blue_button()?,
-            buttons::GREEN_BUTTON => current.mode.green_button()?,
-
-            _ => {}
+        if let Err(error) = handle_event(event, &mut current, &lightstrip_sender) {
+            println!("Error handling event {:?}", error);
         }
     }
 
     for child in threads {
         child.join().expect("oops! a child thread panicked")?
     }
+
+    Ok(())
+}
+
+fn handle_event(
+    event: u64,
+    current: &mut CurrentStatus,
+    lightstrip_sender: &std::sync::mpsc::Sender<lightstrip::Message>,
+) -> anyhow::Result<()> {
+    match event {
+        buttons::MODE_BUTTON_GREEN => current.set_mode(
+            MusicMode::create(&lightstrip_sender)?,
+            Some(buttons::MODE_BUTTON_GREEN_LED),
+        )?,
+        buttons::MODE_BUTTON_RED => {
+            current.set_mode(IdleMode::create()?, Some(buttons::MODE_BUTTON_RED_LED))?
+        }
+        buttons::MODE_BUTTON_BLUE => current.set_mode(
+            ColorMode::create(&lightstrip_sender)?,
+            Some(buttons::MODE_BUTTON_BLUE_LED),
+        )?,
+
+        buttons::RED_BUTTON => current.mode.red_button()?,
+        buttons::RIGHT_BLUE_BUTTON => current.mode.right_blue_botton()?,
+        buttons::LEFT_BLUE_BUTTON => current.mode.left_blue_button()?,
+        buttons::GREEN_BUTTON => current.mode.green_button()?,
+
+        _ => {}
+    };
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-pub mod color_chase;
+pub mod color;
 pub mod idle;
 pub mod music;
 

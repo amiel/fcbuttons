@@ -26,16 +26,16 @@ lazy_static! {
     ];
 }
 
-pub struct ColorChaseMode {
+pub struct ColorMode {
     lightstrip: lightstrip::Sender,
     current_color: usize,
 }
 
-impl ColorChaseMode {
-    pub fn create(lightstrip: &lightstrip::Sender) -> anyhow::Result<ColorChaseMode> {
+impl ColorMode {
+    pub fn create(lightstrip: &lightstrip::Sender) -> anyhow::Result<ColorMode> {
         let lightstrip = lightstrip.clone();
         let current_color = 0;
-        Ok(ColorChaseMode {
+        Ok(ColorMode {
             lightstrip,
             current_color,
         })
@@ -47,12 +47,23 @@ impl ColorChaseMode {
             Ok(())
         })
     }
+
+    fn unchase(&mut self, color: Pixel) -> anyhow::Result<()> {
+        lightstrip::unchase(&self.lightstrip, color).or_else(|err| {
+            println!("Could not start chase {}", err);
+            Ok(())
+        })
+    }
 }
 
-impl ModeTrait for ColorChaseMode {
+impl ModeTrait for ColorMode {
+    fn teardown(&mut self) -> anyhow::Result<()> {
+        self.unchase(Pixel::default())
+    }
+
     fn right_blue_botton(&mut self) -> anyhow::Result<()> {
         self.current_color = (self.current_color + 1) % COLORS.len();
-        self.chase(COLORS[self.current_color])
+        self.unchase(COLORS[self.current_color])
     }
 
     fn left_blue_button(&mut self) -> anyhow::Result<()> {
@@ -61,7 +72,7 @@ impl ModeTrait for ColorChaseMode {
             .checked_sub(1)
             .unwrap_or(COLORS.len() - 1);
 
-        self.chase(COLORS[self.current_color])
+        self.unchase(COLORS[self.current_color])
     }
 
     fn red_button(&mut self) -> anyhow::Result<()> {
