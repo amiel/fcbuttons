@@ -35,6 +35,8 @@ impl CurrentStatus {
             }
         } else {
             self.current_led = None;
+            self.mode = Box::new(IdleMode::create()?);
+            self.mode.setup()?;
         }
 
         Ok(())
