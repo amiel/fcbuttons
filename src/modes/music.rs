@@ -16,13 +16,15 @@ impl MusicMode {
     pub fn create(lightstrip: &lightstrip::Sender) -> anyhow::Result<MusicMode> {
         let mut client = music::new_client().expect("Error creating music client");
 
-        let playlists = client
+        let mut playlists: Vec<String> = client
             .playlists()
             .expect("Error loading playlists")
             .iter()
             .map(|playlist| playlist.name.clone())
             .collect();
         // else: error handling?
+
+        playlists.sort();
 
         let current_playlist = 0;
         let lightstrip = lightstrip.clone();
