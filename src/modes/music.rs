@@ -83,12 +83,12 @@ impl ModeTrait for MusicMode {
         self.client.prev()
     }
 
-    fn red_button(&mut self) -> anyhow::Result<()> {
+    fn green_button(&mut self) -> anyhow::Result<()> {
         self.current_playlist = (self.current_playlist + 1) % self.playlists.len();
         self.start_current_playlist()
     }
 
-    fn green_button(&mut self) -> anyhow::Result<()> {
+    fn red_button(&mut self) -> anyhow::Result<()> {
         self.current_playlist = self
             .current_playlist
             .checked_sub(1)
