@@ -44,16 +44,18 @@ impl CurrentStatus {
 }
 
 fn main() -> anyhow::Result<()> {
+    println!("Starting");
     let mut current = CurrentStatus {
         mode: Box::new(IdleMode {}),
         current_led: None,
     };
 
-    current.set_mode(IdleMode::create()?, None)?;
-
     let (sender, receiver) = std::sync::mpsc::channel();
 
     let mut threads = buttons::setup(&sender)?;
+
+    current.set_mode(IdleMode::create()?, None)?;
+
     let (lightstrip_sender, thread) = lightstrip::setup()?;
     threads.push(thread);
 
