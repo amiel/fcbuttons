@@ -49,9 +49,7 @@ impl MusicMode {
         let colors = self.colors_for_playlist(name);
         println!("Loaded colors for playlist: {:?}", colors);
 
-        for color in colors {
-            lightstrip::flash(&self.lightstrip, color)?;
-        }
+        lightstrip::set(&self.lightstrip, colors)?;
 
         Ok(())
     }
@@ -73,6 +71,7 @@ impl ModeTrait for MusicMode {
     }
 
     fn teardown(&mut self) -> anyhow::Result<()> {
+        lightstrip::unchase_reset(&self.lightstrip)?;
         self.client.stop()
     }
 

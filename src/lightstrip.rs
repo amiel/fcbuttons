@@ -29,15 +29,13 @@ pub struct Pixel {
 }
 
 pub enum Message {
-    Flash(ColorTime),
+    ColorSet(ColorSet),
     Chase(Pixel),
     Unchase(Pixel),
 }
 
-pub struct ColorTime {
-    color: Pixel,
-    fade: std::time::Duration,
-    delay: std::time::Duration,
+pub struct ColorSet {
+    colors: Vec<Pixel>,
 }
 
 pub type Sender = mpsc::Sender<Message>;
@@ -51,7 +49,9 @@ pub fn setup() -> anyhow::Result<(Sender, thread::JoinHandle<anyhow::Result<()>>
     let join_handle = thread::spawn(move || {
         for message in receiver.iter() {
             match message {
-                Message::Flash(one_color_flash) => do_one_color_flash(&mut opc, one_color_flash),
+                Message::ColorSet(one_color_flash) => {
+                    do_alternating_color_set(&mut opc, one_color_flash)
+                }
                 Message::Chase(color) => do_chase(&mut opc, color),
                 Message::Unchase(color) => do_unchase(&mut opc, color),
             }
@@ -63,12 +63,8 @@ pub fn setup() -> anyhow::Result<(Sender, thread::JoinHandle<anyhow::Result<()>>
     Ok((sender, join_handle))
 }
 
-pub fn flash(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Message>> {
-    sender.send(Message::Flash(ColorTime {
-        delay: std::time::Duration::from_secs(1),
-        fade: std::time::Duration::from_secs(1),
-        color: color,
-    }))
+pub fn set(sender: &Sender, colors: Vec<Pixel>) -> Result<(), mpsc::SendError<Message>> {
+    sender.send(Message::ColorSet(ColorSet { colors: colors }))
 }
 
 pub fn chase(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Message>> {
@@ -77,6 +73,10 @@ pub fn chase(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Messag
 
 pub fn unchase(sender: &Sender, color: Pixel) -> Result<(), mpsc::SendError<Message>> {
     sender.send(Message::Unchase(color))
+}
+
+pub fn unchase_reset(sender: &Sender) -> Result<(), mpsc::SendError<Message>> {
+    unchase(sender, Pixel::default())
 }
 
 fn do_clear(opc: &mut PixelControl) {
@@ -109,18 +109,18 @@ fn do_unchase(opc: &mut PixelControl, color: Pixel) {
     }
 }
 
-fn do_one_color_flash(opc: &mut PixelControl, message: ColorTime) {
+fn do_alternating_color_set(opc: &mut PixelControl, message: ColorSet) {
     do_clear(opc);
     do_clear(opc);
 
-    let pixels = vec![message.color.clone(); N_LIGHTS];
+    let n_colors = message.colors.len();
+    let mut pixels = vec![Pixel::default(); N_LIGHTS];
+
+    for i in 0..pixels.len() {
+        pixels[i] = message.colors[i % n_colors].clone();
+    }
+
     opc.emit(&pixels).unwrap();
-
-    thread::sleep(message.delay);
-
-    do_clear(opc);
-
-    thread::sleep(message.fade);
 }
 
 fn init() -> anyhow::Result<PixelControl> {
