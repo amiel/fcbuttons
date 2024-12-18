@@ -1,0 +1,12 @@
+[Unit]
+Description=Fadecandy Server
+After=network.target
+
+[Service]
+Type=exec
+WorkingDirectory=/root/fadecandy/
+ExecStart=/root/fadecandy/bin/fcserver-rpi
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
