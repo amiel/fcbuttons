@@ -3,7 +3,7 @@ Description=Fadecandy Server
 After=network.target
 
 [Service]
-Type=exec
+Type=simple
 WorkingDirectory=/root/fadecandy/
 ExecStart=/root/fadecandy/bin/fcserver-rpi
 Restart=always

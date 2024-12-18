@@ -4,7 +4,8 @@ default: deploy
 
 deploy:
 	rsync -avz Cargo.* src fcbuttons.service fadecandy.service root@chip.lan:/root/fcbuttons
-	ssh root@chip.lan "cd /root/fcbuttons && cp *.service /etc/systemd/system && time cargo install --path . && systemctl enable fadecandy && systemctl enable fcbuttons && systemctl restart fcbuttons"
+	ssh root@chip.lan "cd /root/fcbuttons && cp *.service /etc/systemd/system && time cargo install --path ."
+	ssh root@chip.lan "systemctl enable fadecandy && systemctl enable fcbuttons && systemctl start fadecandy && systemctl restart fcbuttons"
 
 # TODO: install fcserver and fcserver.service
 install_deps:

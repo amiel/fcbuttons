@@ -4,7 +4,7 @@ After=mpd.target
 After=fadecandy.target
 
 [Service]
-Type=exec
+Type=simple
 WorkingDirectory=/root
 ExecStart=/root/.cargo/bin/fcbuttons
 Restart=always
