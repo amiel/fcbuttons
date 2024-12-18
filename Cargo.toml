@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 sysfs_gpio = "0.5"
-mpd = "0.0.12"
+mpd = "0.1.0"
 anyhow = "1.0"
 regex = "1"
 lazy_static = "1.4.0"
