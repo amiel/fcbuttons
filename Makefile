@@ -8,4 +8,4 @@ deploy:
 
 # TODO: install fcserver and fcserver.service
 install_deps:
-	ssh root@chip.lan "apt install -y mpd"
+	ssh root@chip.lan "apt install -y mpd mpc rsync build-essential && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
