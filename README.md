@@ -44,5 +44,16 @@ jessie is no longer supported, but as of this writing, using this snapshot worke
 
 1. copy music
 
+    ```
+    rsync -avz /path/to/music root@chip.lan:/var/lib/mpd/music                                                                                                                                 ✓  2m 24s  3.3.4   hni ⎈  2.48   00:06:23 
+    ```
+
+    Note that Music.app music can be found in ~/Music/Music/Media.localized/Music
+
+2. allow remote connections (if you want to control the player from app or phone)
+
+   update /etc/mpd.config
+   update bind_to_address to "any"
+
 
 
