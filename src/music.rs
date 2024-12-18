@@ -5,8 +5,11 @@ pub struct MusicClient {
 }
 
 pub fn new_client() -> anyhow::Result<MusicClient> {
-    let mut conn = Client::connect("127.0.0.1:6600")?;
-    conn.volume(100)?;
+    // let mut conn = Client::connect("127.0.0.1:6600")?;
+    // maybe re-enable this but fail gracefully
+    // conn.volume(100)?;
+
+    let conn = Client::connect("127.0.0.1:6600")?;
 
     Ok(MusicClient { conn })
 }
