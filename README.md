@@ -18,7 +18,7 @@
 Add the following to your local .ssh/config
 
 ```
-Host chip.lan
+Host chip.local
   PubkeyAcceptedAlgorithms +ssh-rsa
   HostkeyAlgorithms +ssh-rsa
 ```
@@ -45,7 +45,7 @@ jessie is no longer supported, but as of this writing, using this snapshot worke
 1. copy music
 
     ```
-    rsync -avz /path/to/music root@chip.lan:/var/lib/mpd/music                                                                                                                                 ✓  2m 24s  3.3.4   hni ⎈  2.48   00:06:23 
+    rsync -avz /path/to/music root@chip.local:/var/lib/mpd/music
     ```
 
     Note that Music.app music can be found in ~/Music/Music/Media.localized/Music
