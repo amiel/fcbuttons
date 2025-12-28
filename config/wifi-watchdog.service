@@ -1,0 +1,13 @@
+[Unit]
+Description=WiFi watchdog for auto-recovery and reboot
+After=network-online.target NetworkManager.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/wifi-watchdog.sh
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target
