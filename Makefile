@@ -20,3 +20,5 @@ install_playlists:
 backup_playlists:
 	rsync -avz root@chip.local:/var/lib/mpd/playlists/ playlists
 
+shell:
+	ssh root@chip.local
