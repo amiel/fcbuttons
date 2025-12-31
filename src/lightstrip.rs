@@ -34,6 +34,7 @@ pub enum Message {
     Unchase(Pixel),
 }
 
+#[derive(Debug)]
 pub struct ColorSet {
     colors: Vec<Pixel>,
 }
