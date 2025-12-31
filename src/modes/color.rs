@@ -7,7 +7,12 @@ use lightstrip::Pixel;
 
 // Gamma brightness lookup table <https://victornpb.github.io/gamma-table-generator>
 // gamma = 2.00 steps = 8 range = 0-255
-static GAMMA_LUT: [u8; 8] = [0, 5, 21, 47, 83, 130, 187, 255];
+// static GAMMA_LUT: [u8; 8] = [0, 5, 21, 47, 83, 130, 187, 255];
+
+// Gamma brightness lookup table <https://victornpb.github.io/gamma-table-generator>
+// gamma = 2.00 steps = 10 range = 0-255
+// with the first two removed
+static GAMMA_LUT: [u8; 8] = [13,  28,  50,  79, 113, 154, 201, 255];
 
 lazy_static! {
     static ref COLORS: Vec<Pixel> = vec![
