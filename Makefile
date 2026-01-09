@@ -25,6 +25,10 @@ install_playlists:
 backup_playlists:
 	rsync -avz $(CHIP_HOST):/var/lib/mpd/playlists/ playlists
 
+# Copies mosic
+sync_music:
+	rsync -avz music/* $(CHIP_HOST):/var/lib/mpd/music/
+
 shell:
 	ssh $(CHIP_HOST)
 
